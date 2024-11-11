@@ -1,5 +1,7 @@
 package io.github.jerryt92.proxy.http;
 
+import io.github.jerryt92.proxy.http.route.DefaultHttpRouteRule;
+import io.github.jerryt92.proxy.http.route.IHttpRouteRule;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -24,7 +26,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.timeout.ReadTimeoutException;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -35,7 +36,6 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;
-import java.util.AbstractMap;
 import java.util.Map;
 
 /**
@@ -44,6 +44,15 @@ import java.util.Map;
  */
 public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
     private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
+    private final IHttpRouteRule httpRouteRule;
+
+    public HttpRequestHandler() {
+        this.httpRouteRule = new DefaultHttpRouteRule();
+    }
+
+    public HttpRequestHandler(IHttpRouteRule httpRouteRule) {
+        this.httpRouteRule = httpRouteRule;
+    }
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
@@ -98,27 +107,15 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
 
     Map.Entry<String, Integer> parseHostAndPort(ChannelHandlerContext ctx, Object msg) {
         try {
-            ByteBuf msgBuf = (ByteBuf) msg;
-            ByteBuf msgCopy = msgBuf.copy();
+            ByteBuf msgCopy = ((ByteBuf) msg).copy();
             EmbeddedChannel httpRequestDecoder = new EmbeddedChannel(new HttpRequestDecoder());
             httpRequestDecoder.writeInbound(msgCopy);
             HttpRequest request = httpRequestDecoder.readInbound();
             if (request == null || request.headers() == null) {
+                // Get route from cache
                 return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
             }
-            String host = request.headers().get("Host");
-            String targetHost = (host == null) ? null : host.split("\\.proxy")[0];
-            if (StringUtils.isEmpty(host) || StringUtils.isEmpty(targetHost)) {
-                return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
-            }
-            int lastDotIndex = targetHost.lastIndexOf('.');
-            if (lastDotIndex == -1) {
-                return null;
-            }
-            String hostPart = targetHost.substring(0, lastDotIndex);
-            String portPart = targetHost.substring(lastDotIndex + 1);
-            int port = Integer.parseInt(portPart);
-            Map.Entry<String, Integer> route = new AbstractMap.SimpleEntry<>(hostPart, port);
+            Map.Entry<String, Integer> route = httpRouteRule.getRoute(request);
             ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);
             return route;
         } catch (Exception e) {

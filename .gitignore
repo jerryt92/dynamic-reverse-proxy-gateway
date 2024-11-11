@@ -93,7 +93,7 @@ local.properties
 
 ########### idea
 
-../dynamic-reverse-proxy-gateway-old/.idea/
+.idea/
 *.iml
 *.ipr
 

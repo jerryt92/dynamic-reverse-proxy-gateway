@@ -4,18 +4,18 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-public class HttpServerResponseHandler extends ChannelInboundHandlerAdapter {
+public class HttpResponseHandler extends ChannelInboundHandlerAdapter {
 
     private final Channel inboundChannel;
 
-    public HttpServerResponseHandler(Channel inboundChannel) {
+    public HttpResponseHandler(Channel inboundChannel) {
         this.inboundChannel = inboundChannel;
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         if (!inboundChannel.isActive()) {
-            HttpServerRequestHandler.closeOnFlush(ctx.channel());
+            HttpRequestHandler.closeOnFlush(ctx.channel());
         } else {
             ctx.read();
         }
@@ -28,12 +28,12 @@ public class HttpServerResponseHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        HttpServerRequestHandler.closeOnFlush(inboundChannel);
+        HttpRequestHandler.closeOnFlush(inboundChannel);
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         cause.printStackTrace();
-        HttpServerRequestHandler.closeOnFlush(ctx.channel());
+        HttpRequestHandler.closeOnFlush(ctx.channel());
     }
 }

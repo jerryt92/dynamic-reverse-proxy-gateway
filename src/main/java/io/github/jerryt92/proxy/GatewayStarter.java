@@ -1,6 +1,6 @@
 package io.github.jerryt92.proxy;
 
-import io.github.jerryt92.proxy.http.HttpServerRequestHandler;
+import io.github.jerryt92.proxy.http.HttpRequestHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -19,7 +19,7 @@ import org.apache.logging.log4j.Logger;
 public class GatewayStarter {
     private static final int port = 8888;
 
-    private static final Logger log = LogManager.getLogger(HttpServerRequestHandler.class);
+    private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
 
     public static void main(String[] args) {
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -35,7 +35,7 @@ public class GatewayStarter {
                             ch.pipeline().addLast(
                                     new HttpRequestDecoder(),
                                     new HttpObjectAggregator(65536),
-                                    new HttpServerRequestHandler(),
+                                    new HttpRequestHandler(),
                                     new HttpResponseEncoder()
                             );
                         }

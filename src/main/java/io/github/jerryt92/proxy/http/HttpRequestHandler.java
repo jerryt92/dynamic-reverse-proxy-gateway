@@ -37,8 +37,8 @@ import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
 import java.util.Map;
 
-public class HttpServerRequestHandler extends ChannelInboundHandlerAdapter {
-    private static final Logger log = LogManager.getLogger(HttpServerRequestHandler.class);
+public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
+    private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
@@ -71,7 +71,7 @@ public class HttpServerRequestHandler extends ChannelInboundHandlerAdapter {
                             ch.pipeline().addLast(
                                     new HttpRequestEncoder(),
                                     new HttpResponseDecoder(),
-                                    new HttpServerResponseHandler(ctx.channel())
+                                    new HttpResponseHandler(ctx.channel())
                             );
                         }
                     }

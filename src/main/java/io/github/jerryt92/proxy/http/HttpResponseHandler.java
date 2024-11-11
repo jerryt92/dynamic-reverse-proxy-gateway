@@ -4,6 +4,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
+/**
+ * @Date: 2024/11/11
+ * @Author: jerryt92
+ */
 public class HttpResponseHandler extends ChannelInboundHandlerAdapter {
 
     private final Channel inboundChannel;

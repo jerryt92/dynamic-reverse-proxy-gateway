@@ -20,7 +20,8 @@ For the English version of this README, please refer to [README_en.md](readme_en
 ## 存在的问题
 
 - 网关的HTTPS支持存在问题，无法正确处理HTTPS请求。
-- 无法支持WebSocket协议。
+- ~~无法支持WebSocket协议。~~
+- 通过缓存HTTP路由信息的方式支持了WebSocket。
 
 ## 依赖
 

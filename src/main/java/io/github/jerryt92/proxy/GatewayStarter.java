@@ -8,18 +8,19 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.HttpRequestDecoder;
-import io.netty.handler.codec.http.HttpResponseEncoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+/**
+ * @Date: 2024/11/11
+ * @Author: jerryt92
+ */
 public class GatewayStarter {
     private static final int port = 8888;
 
-    private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
+    private static final Logger log = LogManager.getLogger(GatewayStarter.class);
 
     public static void main(String[] args) {
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -33,10 +34,7 @@ public class GatewayStarter {
                         @Override
                         public void initChannel(SocketChannel ch) {
                             ch.pipeline().addLast(
-                                    new HttpRequestDecoder(),
-                                    new HttpObjectAggregator(65536),
-                                    new HttpRequestHandler(),
-                                    new HttpResponseEncoder()
+                                    new HttpRequestHandler()
                             );
                         }
                     })

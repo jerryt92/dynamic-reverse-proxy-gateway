@@ -1,6 +1,7 @@
 package io.github.jerryt92.proxy.http;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -10,14 +11,14 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpRequest;
-import io.netty.handler.codec.http.HttpRequestEncoder;
-import io.netty.handler.codec.http.HttpResponseDecoder;
+import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -37,6 +38,10 @@ import java.security.cert.X509Certificate;
 import java.util.AbstractMap;
 import java.util.Map;
 
+/**
+ * @Date: 2024/11/11
+ * @Author: jerryt92
+ */
 public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
     private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
 
@@ -46,7 +51,7 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
         try {
             log.info("Src address: {}", ctx.channel().remoteAddress());
             log.info("Dst address: {}", ctx.channel().localAddress());
-            Map.Entry<String, Integer> route = parseHostAndPort(ctx, (HttpRequest) msg);
+            Map.Entry<String, Integer> route = parseHostAndPort(ctx, msg);
             if (route == null) {
                 FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
                 ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
@@ -54,6 +59,14 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
             }
             String remoteHost = route.getKey();
             int remotePort = route.getValue();
+            if (ProxyChannelCache.getChannelClientCache().containsKey(ctx.channel())) {
+                Channel channel = ProxyChannelCache.getChannelClientCache().get(ctx.channel());
+                if (channel != null && channel.isActive()) {
+                    channel.writeAndFlush(msg);
+                    return;
+                }
+                ProxyChannelCache.getChannelClientCache().remove(ctx.channel());
+            }
             Bootstrap b = new Bootstrap();
             b.group(workerGroup);
             b.channel(NioSocketChannel.class);
@@ -69,41 +82,49 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
                                 );
                             }
                             ch.pipeline().addLast(
-                                    new HttpRequestEncoder(),
-                                    new HttpResponseDecoder(),
                                     new HttpResponseHandler(ctx.channel())
                             );
                         }
                     }
             );
             ChannelFuture f = b.connect(remoteHost, remotePort).sync();
-            f.channel().writeAndFlush(msg);
+            Channel channel = f.channel();
+            ProxyChannelCache.getChannelClientCache().put(ctx.channel(), channel);
+            channel.writeAndFlush(msg);
         } catch (Exception e) {
             exceptionCaught(ctx, e);
         }
     }
 
-    Map.Entry<String, Integer> parseHostAndPort(ChannelHandlerContext ctx, HttpRequest request) {
-        String host = request.headers().get("Host");
-        String targetHost = host.split("\\.proxy")[0];
-        if (StringUtils.isBlank(targetHost)) {
-            return null;
-        }
-        // Split the targetHost by the last dot to separate the host and port
-        int lastDotIndex = targetHost.lastIndexOf('.');
-        if (lastDotIndex == -1) {
-            return null;
-        }
-        String hostPart = targetHost.substring(0, lastDotIndex);
-        String portPart = targetHost.substring(lastDotIndex + 1);
+    Map.Entry<String, Integer> parseHostAndPort(ChannelHandlerContext ctx, Object msg) {
         try {
+            ByteBuf msgBuf = (ByteBuf) msg;
+            ByteBuf msgCopy = msgBuf.copy();
+            EmbeddedChannel httpRequestDecoder = new EmbeddedChannel(new HttpRequestDecoder());
+            httpRequestDecoder.writeInbound(msgCopy);
+            HttpRequest request = httpRequestDecoder.readInbound();
+            if (request == null || request.headers() == null) {
+                return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
+            }
+            String host = request.headers().get("Host");
+            String targetHost = (host == null) ? null : host.split("\\.proxy")[0];
+            if (StringUtils.isEmpty(host) || StringUtils.isEmpty(targetHost)) {
+                return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
+            }
+            int lastDotIndex = targetHost.lastIndexOf('.');
+            if (lastDotIndex == -1) {
+                return null;
+            }
+            String hostPart = targetHost.substring(0, lastDotIndex);
+            String portPart = targetHost.substring(lastDotIndex + 1);
             int port = Integer.parseInt(portPart);
-            return new AbstractMap.SimpleEntry<>(hostPart, port);
-        } catch (NumberFormatException e) {
+            Map.Entry<String, Integer> route = new AbstractMap.SimpleEntry<>(hostPart, port);
+            ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);
+            return route;
+        } catch (Exception e) {
             return null;
         }
     }
-
 
     private Boolean checkTargetSupportHttps(String host, int port) {
         try {
@@ -142,6 +163,13 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
             cause.printStackTrace();
             closeOnFlush(ctx.channel());
         }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        ProxyChannelCache.getChannelClientCache().remove(ctx.channel());
+        ProxyChannelCache.getChannelRouteCache().remove(ctx.channel());
+        super.channelInactive(ctx);
     }
 
     /**

@@ -14,7 +14,8 @@ This is a dynamic reverse proxy gateway project implemented based on Netty. It c
 ## Known Issues
 
 - The gateway's HTTPS support has issues and cannot handle HTTPS requests correctly.
-- Does not support WebSocket protocol.
+- ~~Does not support WebSocket protocol.~~
+- Supports WebSocket by caching HTTP routing information.
 
 ## Dependencies
 

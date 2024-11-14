@@ -56,7 +56,6 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             log.info("Src address: {}", ctx.channel().remoteAddress());
             log.info("Dst address: {}", ctx.channel().localAddress());
@@ -76,6 +75,7 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
                 }
                 ProxyChannelCache.getChannelClientCache().remove(ctx.channel());
             }
+            EventLoopGroup workerGroup = new NioEventLoopGroup();
             Bootstrap b = new Bootstrap();
             b.group(workerGroup);
             b.channel(NioSocketChannel.class);

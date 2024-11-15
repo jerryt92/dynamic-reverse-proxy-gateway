@@ -106,9 +106,10 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
 
     Map.Entry<String, Integer> parseHostAndPort(ChannelHandlerContext ctx, Object msg) {
         try {
-            if (ProxyChannelCache.getChannelRouteCache().containsKey(ctx.channel())) {
-                // Get route from cache
-                return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
+            // Get route from cache
+            Map.Entry<String, Integer> route = ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
+            if (route != null) {
+                return route;
             }
             ByteBuf msgCopy = ((ByteBuf) msg).copy();
             EmbeddedChannel httpRequestDecoder = new EmbeddedChannel(new HttpRequestDecoder());
@@ -117,7 +118,7 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
             if (request == null || request.headers() == null) {
                 return null;
             }
-            Map.Entry<String, Integer> route = httpRouteRule.getRoute(request);
+            route = httpRouteRule.getRoute(request);
             ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);
             return route;
         } catch (Exception e) {

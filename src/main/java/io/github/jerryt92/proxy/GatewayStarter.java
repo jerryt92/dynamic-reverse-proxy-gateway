@@ -34,7 +34,7 @@ public class GatewayStarter {
                         @Override
                         public void initChannel(SocketChannel ch) {
                             ch.pipeline().addLast(
-                                    new HttpRequestHandler()
+                                    new HttpRequestHandler(workerGroup)
                             );
                         }
                     })

@@ -14,7 +14,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -45,12 +44,15 @@ import java.util.Map;
 public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
     private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
     private final IHttpRouteRule httpRouteRule;
+    private final EventLoopGroup workerGroup;
 
-    public HttpRequestHandler() {
+    public HttpRequestHandler(EventLoopGroup workerGroup) {
+        this.workerGroup = workerGroup;
         this.httpRouteRule = new DefaultHttpRouteRule();
     }
 
-    public HttpRequestHandler(IHttpRouteRule httpRouteRule) {
+    public HttpRequestHandler(EventLoopGroup workerGroup, IHttpRouteRule httpRouteRule) {
+        this.workerGroup = workerGroup;
         this.httpRouteRule = httpRouteRule;
     }
 
@@ -75,7 +77,6 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
                 }
                 ProxyChannelCache.getChannelClientCache().remove(ctx.channel());
             }
-            EventLoopGroup workerGroup = new NioEventLoopGroup();
             Bootstrap b = new Bootstrap();
             b.group(workerGroup);
             b.channel(NioSocketChannel.class);

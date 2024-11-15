@@ -40,8 +40,6 @@ public class GatewayStarter {
                     })
                     // 设置并发连接数
                     .option(ChannelOption.SO_BACKLOG, 1024)
-                    // 保持连接
-                    .childOption(ChannelOption.SO_KEEPALIVE, true)
                     .bind(port).sync().channel().closeFuture().sync();
             log.info("Gateway started at port {}", port);
         } catch (InterruptedException e) {

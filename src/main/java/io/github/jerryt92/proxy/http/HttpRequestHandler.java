@@ -11,7 +11,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -80,7 +79,6 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
             Bootstrap b = new Bootstrap();
             b.group(workerGroup);
             b.channel(NioSocketChannel.class);
-            b.option(ChannelOption.AUTO_READ, true);
             b.handler(
                     new ChannelInitializer<SocketChannel>() {
                         @Override
@@ -108,13 +106,16 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
 
     Map.Entry<String, Integer> parseHostAndPort(ChannelHandlerContext ctx, Object msg) {
         try {
+            if (ProxyChannelCache.getChannelRouteCache().containsKey(ctx.channel())) {
+                // Get route from cache
+                return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
+            }
             ByteBuf msgCopy = ((ByteBuf) msg).copy();
             EmbeddedChannel httpRequestDecoder = new EmbeddedChannel(new HttpRequestDecoder());
             httpRequestDecoder.writeInbound(msgCopy);
             HttpRequest request = httpRequestDecoder.readInbound();
             if (request == null || request.headers() == null) {
-                // Get route from cache
-                return ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
+                return null;
             }
             Map.Entry<String, Integer> route = httpRouteRule.getRoute(request);
             ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);

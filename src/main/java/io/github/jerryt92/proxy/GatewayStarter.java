@@ -1,6 +1,5 @@
 package io.github.jerryt92.proxy;
 
-import io.github.jerryt92.proxy.http.HttpRequestHandler;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -39,7 +38,7 @@ public class GatewayStarter {
                         @Override
                         public void initChannel(SocketChannel ch) {
                             ch.pipeline().addLast(
-                                    new HttpRequestHandler(workerGroup)
+                                    new RequestHandler(workerGroup)
                             );
                         }
                     })

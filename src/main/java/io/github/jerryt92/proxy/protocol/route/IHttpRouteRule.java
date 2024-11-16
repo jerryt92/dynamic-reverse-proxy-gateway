@@ -1,4 +1,4 @@
-package io.github.jerryt92.proxy.http.route;
+package io.github.jerryt92.proxy.protocol.route;
 
 import io.netty.handler.codec.http.HttpRequest;
 

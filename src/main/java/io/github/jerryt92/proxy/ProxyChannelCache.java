@@ -1,4 +1,4 @@
-package io.github.jerryt92.proxy.http;
+package io.github.jerryt92.proxy;
 
 import io.netty.channel.Channel;
 

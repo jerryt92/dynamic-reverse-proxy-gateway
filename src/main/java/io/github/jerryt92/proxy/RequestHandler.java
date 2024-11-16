@@ -1,7 +1,9 @@
-package io.github.jerryt92.proxy.http;
+package io.github.jerryt92.proxy;
 
-import io.github.jerryt92.proxy.http.route.DefaultHttpRouteRule;
-import io.github.jerryt92.proxy.http.route.IHttpRouteRule;
+import io.github.jerryt92.proxy.protocol.ProtocolType;
+import io.github.jerryt92.proxy.protocol.route.DefaultHttpRouteRule;
+import io.github.jerryt92.proxy.protocol.route.IHttpRouteRule;
+import io.github.jerryt92.proxy.protocol.tcp.ProtocolDetection;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -40,17 +42,17 @@ import java.util.Map;
  * @Date: 2024/11/11
  * @Author: jerryt92
  */
-public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
-    private static final Logger log = LogManager.getLogger(HttpRequestHandler.class);
+public class RequestHandler extends ChannelInboundHandlerAdapter {
+    private static final Logger log = LogManager.getLogger(RequestHandler.class);
     private final IHttpRouteRule httpRouteRule;
     private final EventLoopGroup workerGroup;
 
-    public HttpRequestHandler(EventLoopGroup workerGroup) {
+    public RequestHandler(EventLoopGroup workerGroup) {
         this.workerGroup = workerGroup;
         this.httpRouteRule = new DefaultHttpRouteRule();
     }
 
-    public HttpRequestHandler(EventLoopGroup workerGroup, IHttpRouteRule httpRouteRule) {
+    public RequestHandler(EventLoopGroup workerGroup, IHttpRouteRule httpRouteRule) {
         this.workerGroup = workerGroup;
         this.httpRouteRule = httpRouteRule;
     }
@@ -60,7 +62,7 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
         try {
             log.info("Src address: {}", ctx.channel().remoteAddress());
             log.info("Dst address: {}", ctx.channel().localAddress());
-            Map.Entry<String, Integer> route = parseHostAndPort(ctx, msg);
+            Map.Entry<String, Integer> route = getRoute(ctx, msg);
             if (route == null) {
                 FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
                 ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
@@ -90,7 +92,7 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
                                 );
                             }
                             ch.pipeline().addLast(
-                                    new HttpResponseHandler(ctx.channel())
+                                    new ResponseHandler(ctx.channel())
                             );
                         }
                     }
@@ -104,24 +106,35 @@ public class HttpRequestHandler extends ChannelInboundHandlerAdapter {
         }
     }
 
-    Map.Entry<String, Integer> parseHostAndPort(ChannelHandlerContext ctx, Object msg) {
+    Map.Entry<String, Integer> getRoute(ChannelHandlerContext ctx, Object msg) {
         try {
+            ByteBuf msgByteBuf = (ByteBuf) msg;
             // Get route from cache
             Map.Entry<String, Integer> route = ProxyChannelCache.getChannelRouteCache().get(ctx.channel());
             if (route != null) {
                 return route;
             }
-            ByteBuf msgCopy = ((ByteBuf) msg).copy();
-            EmbeddedChannel httpRequestDecoder = new EmbeddedChannel(new HttpRequestDecoder());
-            httpRequestDecoder.writeInbound(msgCopy);
-            HttpRequest request = httpRequestDecoder.readInbound();
-            if (request == null || request.headers() == null) {
-                return null;
+            ByteBuf msgCopy = msgByteBuf.copy();
+            // Detect protocol type
+            ProtocolType protocol = ProtocolDetection.detectProtocol(msgByteBuf);
+            log.info("Protocol: {}", protocol);
+            switch (protocol) {
+                case HTTP:
+                    EmbeddedChannel httpChannel = new EmbeddedChannel(new HttpRequestDecoder());
+                    httpChannel.writeInbound(msgCopy);
+                    HttpRequest request = httpChannel.readInbound();
+                    if (request == null || request.headers() == null) {
+                        return null;
+                    }
+                    route = httpRouteRule.getRoute(request);
+                    ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);
+                default:
+                    log.error("Unsupported protocol: {}", protocol);
+                    break;
             }
-            route = httpRouteRule.getRoute(request);
-            ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);
             return route;
         } catch (Exception e) {
+            log.error("", e);
             return null;
         }
     }

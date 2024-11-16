@@ -18,11 +18,16 @@ import org.apache.logging.log4j.Logger;
  * @Author: jerryt92
  */
 public class GatewayStarter {
-    private static final int port = 8888;
+    private static int port = 8888;
 
     private static final Logger log = LogManager.getLogger(GatewayStarter.class);
 
     public static void main(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--port")) {
+                port = Integer.parseInt(args[i + 1]);
+            }
+        }
         ServerBootstrap bootstrap = new ServerBootstrap();
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();

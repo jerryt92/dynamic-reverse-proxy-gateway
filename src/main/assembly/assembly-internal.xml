@@ -1,0 +1,53 @@
+<assembly
+	xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
+	<id>dynamic-reverse-proxy-gateway</id>
+	<formats>
+		<format>tar.gz</format>
+	</formats>
+	<includeSiteDirectory>false</includeSiteDirectory>
+	<includeBaseDirectory>false</includeBaseDirectory>
+	<dependencySets>
+		<dependencySet>
+			<useProjectArtifact>false</useProjectArtifact>
+			<outputDirectory>dynamic-reverse-proxy-gateway/lib</outputDirectory>
+			<excludes>
+				<exclude>io.github.jerryt92.proxy:dynamic-reverse-proxy-gateway</exclude>
+			</excludes>
+			<scope>runtime</scope>
+		</dependencySet>
+	</dependencySets>
+	<fileSets>
+		<fileSet>
+			<directory>src/main/bin</directory>
+			<outputDirectory>dynamic-reverse-proxy-gateway/bin</outputDirectory>
+			<includes>
+				<include>*.sh</include>
+			</includes>
+			<fileMode>0744</fileMode>
+            <lineEnding>unix</lineEnding>
+		</fileSet>
+        <fileSet>
+			<directory>src/main/resources</directory>
+			<outputDirectory>dynamic-reverse-proxy-gateway</outputDirectory>
+			<includes>
+				<include>manifest.mf</include>
+			</includes>
+		</fileSet>
+		<!-- 拷贝当前target目录下的class文件 -->
+		<fileSet>
+			<directory>target/classes</directory>
+			<outputDirectory>dynamic-reverse-proxy-gateway/classes</outputDirectory>
+			<includes>
+				<include>**/*.*</include>
+			</includes>
+		</fileSet>
+	</fileSets>
+	<files>
+		<file>
+			<source>target/dynamic-reverse-proxy-gateway-${project.version}.jar</source>
+			<outputDirectory>dynamic-reverse-proxy-gateway/bundled-jar</outputDirectory>
+		</file>
+	</files>
+</assembly>

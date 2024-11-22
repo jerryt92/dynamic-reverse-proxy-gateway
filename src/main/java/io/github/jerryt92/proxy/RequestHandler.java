@@ -115,7 +115,8 @@ public class RequestHandler extends ChannelInboundHandlerAdapter {
                 return route;
             }
             ByteBuf msgCopy = msgByteBuf.copy();
-            // Detect protocol type
+            // 识别第一个数据包协议，获取对应的路由策略
+            // Detect first packet protocol to get corresponding routing strategy
             ProtocolType protocol = ProtocolDetection.detectProtocol(msgByteBuf);
             log.info("Protocol: {}", protocol);
             switch (protocol) {
@@ -128,6 +129,7 @@ public class RequestHandler extends ChannelInboundHandlerAdapter {
                     }
                     route = httpRouteRule.getRoute(request);
                     ProxyChannelCache.getChannelRouteCache().put(ctx.channel(), route);
+                    break;
                 default:
                     log.error("Unsupported protocol: {}", protocol);
                     break;

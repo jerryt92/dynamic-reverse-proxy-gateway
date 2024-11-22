@@ -32,12 +32,14 @@ public class GatewayStarter {
 
     private static final String KEY_PATH = "cert/localhost_pkcs8.key";
 
-    private static final boolean useSsl = true;
-
     public static void main(String[] args) {
+        boolean ssl = false;
         for (int i = 0; i < args.length; i++) {
             if (args[i].equals("--port")) {
                 port = Integer.parseInt(args[i + 1]);
+            }
+            if (args[i].equals("--ssl")) {
+                ssl = true;
             }
         }
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -45,7 +47,7 @@ public class GatewayStarter {
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ChannelHandler channelHandler = null;
-            if (useSsl) {
+            if (ssl) {
                 ClassLoader classLoader = GatewayStarter.class.getClassLoader();
                 InputStream certChainFile = classLoader.getResourceAsStream(CERT_PATH);
                 InputStream keyFile = classLoader.getResourceAsStream(KEY_PATH);
@@ -57,18 +59,14 @@ public class GatewayStarter {
                     @Override
                     public void initChannel(SocketChannel ch) {
                         ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
-                        ch.pipeline().addLast(
-                                new RequestHandler(workerGroup)
-                        );
+                        ch.pipeline().addLast(generateRequestHandler(workerGroup));
                     }
                 };
             } else {
                 channelHandler = new ChannelInitializer<SocketChannel>() {
                     @Override
                     public void initChannel(SocketChannel ch) {
-                        ch.pipeline().addLast(
-                                new RequestHandler(workerGroup)
-                        );
+                        ch.pipeline().addLast(generateRequestHandler(workerGroup));
                     }
                 };
             }
@@ -87,5 +85,9 @@ public class GatewayStarter {
             workerGroup.shutdownGracefully();
             bossGroup.shutdownGracefully();
         }
+    }
+
+    public static RequestHandler generateRequestHandler(EventLoopGroup workerGroup) {
+        return new RequestHandler(workerGroup);
     }
 }

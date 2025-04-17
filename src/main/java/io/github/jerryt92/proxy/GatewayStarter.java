@@ -77,8 +77,18 @@ public class GatewayStarter {
                     .childHandler(channelHandler)
                     // 设置并发连接数
                     .option(ChannelOption.SO_BACKLOG, 1024)
-                    .bind(port).sync().channel().closeFuture().sync();
-            log.info("Gateway started at port {}", port);
+                    .bind(port)
+                    .sync()
+                    .addListener(future -> {
+                        if (future.isSuccess()) {
+                            log.info("Gateway started at port {}", port);
+                        } else {
+                            log.error("Gateway started at port", future.cause());
+                        }
+                    })
+                    .channel()
+                    .closeFuture()
+                    .sync();
         } catch (InterruptedException | SSLException e) {
             throw new RuntimeException(e);
         } finally {

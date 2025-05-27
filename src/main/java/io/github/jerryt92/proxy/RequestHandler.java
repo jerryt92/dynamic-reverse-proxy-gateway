@@ -6,7 +6,6 @@ import io.github.jerryt92.proxy.protocol.route.IHttpRouteRule;
 import io.github.jerryt92.proxy.protocol.tcp.ProtocolDetection;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -175,8 +174,8 @@ public class RequestHandler extends ChannelInboundHandlerAdapter {
             FullHttpResponse response = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.NOT_FOUND);
             ctx.writeAndFlush(response).addListener(ChannelFutureListener.CLOSE);
         } else {
-            cause.printStackTrace();
-            closeOnFlush(ctx.channel());
+            log.error("", cause);
+            ctx.close();
         }
     }
 
@@ -185,14 +184,5 @@ public class RequestHandler extends ChannelInboundHandlerAdapter {
         ProxyChannelCache.getChannelClientCache().remove(ctx.channel());
         ProxyChannelCache.getChannelRouteCache().remove(ctx.channel());
         super.channelInactive(ctx);
-    }
-
-    /**
-     * Closes the specified channel after all queued write requests are flushed.
-     */
-    static void closeOnFlush(Channel ch) {
-        if (ch.isActive()) {
-            ch.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
-        }
     }
 }

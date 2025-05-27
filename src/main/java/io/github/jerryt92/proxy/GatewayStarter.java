@@ -18,12 +18,16 @@ import org.apache.logging.log4j.Logger;
 
 import javax.net.ssl.SSLException;
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 /**
  * @Date: 2024/11/11
  * @Author: jerryt92
  */
 public class GatewayStarter {
+    private static String bindAddress = "0.0.0.0";
+
     private static int port = 8888;
 
     private static final Logger log = LogManager.getLogger(GatewayStarter.class);
@@ -77,9 +81,19 @@ public class GatewayStarter {
                     .childHandler(channelHandler)
                     // 设置并发连接数
                     .option(ChannelOption.SO_BACKLOG, 1024)
-                    .bind(port).sync().channel().closeFuture().sync();
-            log.info("Gateway started at port {}", port);
-        } catch (InterruptedException | SSLException e) {
+                    .bind(InetAddress.getByName(bindAddress), port)
+                    .sync()
+                    .addListener(future -> {
+                        if (future.isSuccess()) {
+                            log.info("Gateway started at port {}", port);
+                        } else {
+                            log.error("Gateway started at port", future.cause());
+                        }
+                    })
+                    .channel()
+                    .closeFuture()
+                    .sync();
+        } catch (InterruptedException | SSLException | UnknownHostException e) {
             throw new RuntimeException(e);
         } finally {
             workerGroup.shutdownGracefully();

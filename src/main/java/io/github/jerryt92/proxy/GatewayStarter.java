@@ -16,10 +16,9 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.net.ssl.SSLException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 /**
  * @Date: 2024/11/11
@@ -66,6 +65,7 @@ public class GatewayStarter {
                         ch.pipeline().addLast(generateRequestHandler(workerGroup));
                     }
                 };
+                certChainFile.close();
             } else {
                 channelHandler = new ChannelInitializer<SocketChannel>() {
                     @Override
@@ -93,7 +93,7 @@ public class GatewayStarter {
                     .channel()
                     .closeFuture()
                     .sync();
-        } catch (InterruptedException | SSLException | UnknownHostException e) {
+        } catch (InterruptedException | IOException e) {
             throw new RuntimeException(e);
         } finally {
             workerGroup.shutdownGracefully();

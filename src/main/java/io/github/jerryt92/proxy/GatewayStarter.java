@@ -52,20 +52,20 @@ public class GatewayStarter {
             ChannelHandler channelHandler = null;
             if (ssl) {
                 ClassLoader classLoader = GatewayStarter.class.getClassLoader();
-                InputStream certChainFile = classLoader.getResourceAsStream(CERT_PATH);
-                InputStream keyFile = classLoader.getResourceAsStream(KEY_PATH);
-                if (certChainFile == null || keyFile == null) {
-                    throw new RuntimeException("Certificate or key file not found in classpath");
-                }
-                SslContext sslCtx = SslContextBuilder.forServer(certChainFile, keyFile).trustManager(InsecureTrustManagerFactory.INSTANCE).build();
-                channelHandler = new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) {
-                        ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
-                        ch.pipeline().addLast(generateRequestHandler(workerGroup));
+                try (InputStream certChainFile = classLoader.getResourceAsStream(CERT_PATH);
+                     InputStream keyFile = classLoader.getResourceAsStream(KEY_PATH)) {
+                    if (certChainFile == null || keyFile == null) {
+                        throw new RuntimeException("Certificate or key file not found in classpath");
                     }
-                };
-                certChainFile.close();
+                    SslContext sslCtx = SslContextBuilder.forServer(certChainFile, keyFile).trustManager(InsecureTrustManagerFactory.INSTANCE).build();
+                    channelHandler = new ChannelInitializer<SocketChannel>() {
+                        @Override
+                        public void initChannel(SocketChannel ch) {
+                            ch.pipeline().addFirst(sslCtx.newHandler(ch.alloc()));
+                            ch.pipeline().addLast(generateRequestHandler(workerGroup));
+                        }
+                    };
+                }
             } else {
                 channelHandler = new ChannelInitializer<SocketChannel>() {
                     @Override

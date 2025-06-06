@@ -75,6 +75,10 @@ public class RequestHandler extends ChannelInboundHandlerAdapter {
                     channel.writeAndFlush(msg);
                     return;
                 }
+                if (channel != null && !channel.isActive()) {
+                    // 显式关闭连接
+                    channel.close();
+                }
                 ProxyChannelCache.getChannelClientCache().remove(ctx.channel());
             }
             Bootstrap b = new Bootstrap();

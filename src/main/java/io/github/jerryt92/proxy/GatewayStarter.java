@@ -80,7 +80,9 @@ public class GatewayStarter {
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(channelHandler)
                     // 设置并发连接数
-                    .option(ChannelOption.SO_BACKLOG, 1024)
+                    .option(ChannelOption.SO_BACKLOG, 2048)
+                    // 设置连接超时时间
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     .bind(InetAddress.getByName(bindAddress), port)
                     .sync()
                     .addListener(future -> {

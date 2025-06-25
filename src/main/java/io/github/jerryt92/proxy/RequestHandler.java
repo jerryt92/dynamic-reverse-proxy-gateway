@@ -100,10 +100,16 @@ public class RequestHandler extends ChannelInboundHandlerAdapter {
                         }
                     }
             );
-            ChannelFuture f = b.connect(remoteHost, remotePort).sync();
-            Channel channel = f.channel();
-            ProxyChannelCache.getChannelClientCache().put(ctx.channel(), channel);
-            channel.writeAndFlush(msg);
+            ChannelFuture f = b.connect(remoteHost, remotePort);
+            f.addListener((ChannelFutureListener) future -> {
+                if (future.isSuccess()) {
+                    Channel channel = future.channel();
+                    channel.writeAndFlush(msg);
+                    ProxyChannelCache.getChannelClientCache().put(ctx.channel(), channel);
+                } else {
+                    exceptionCaught(ctx, future.cause());
+                }
+            });
         } catch (Exception e) {
             exceptionCaught(ctx, e);
         }

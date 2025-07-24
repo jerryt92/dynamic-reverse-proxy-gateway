@@ -1,11 +1,11 @@
 package io.github.jerryt92.proxy;
 
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -36,9 +36,9 @@ public class GatewayStarter {
 
     private static final String KEY_PATH = "cert/localhost_pkcs8.key";
     /**
-     * 缓冲区大小100 MB
+     * 最大缓冲区大小1024MB
      */
-    private static final int bufferSize = 100 * 1024 * 1024;
+    private static final int maxBufferSize = 1024 * 1024 * 1024;
 
     public static void main(String[] args) {
         boolean ssl = false;
@@ -89,12 +89,9 @@ public class GatewayStarter {
                     // 设置连接超时时间
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
                     // 设置接收缓冲区大小
-                    .option(ChannelOption.SO_RCVBUF, bufferSize)
-                    // 设置 ByteBuf 分配器，固定大小缓冲区
-                    .option(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(bufferSize))
-                    // 子通道（客户端连接）也设置相同参数
-                    .childOption(ChannelOption.SO_RCVBUF, bufferSize)
-                    .childOption(ChannelOption.RCVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(bufferSize))
+                    .option(ChannelOption.SO_RCVBUF, maxBufferSize)
+                    // 设置自动分配缓冲区
+                    .option(ChannelOption.RCVBUF_ALLOCATOR, new AdaptiveRecvByteBufAllocator(1024, 4096, maxBufferSize))
                     .bind(InetAddress.getByName(bindAddress), port)
                     .sync()
                     .addListener(future -> {

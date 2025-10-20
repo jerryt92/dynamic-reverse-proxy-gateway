@@ -12,11 +12,6 @@ This is a dynamic reverse proxy gateway project implemented based on Netty. It c
 - High-performance network communication using Netty.
 - Logging using Log4j.
 
-## Known Issues
-
-- ~~The gateway's HTTPS support has issues and cannot handle HTTPS requests correctly.~~
-- ~~Does not support WebSocket protocol.~~ Supports WebSocket by caching HTTP routing information.
-
 ## Dependencies
 
 - Java 11
